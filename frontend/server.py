@@ -7,9 +7,12 @@ Agent logic is imported from agents/ as each agent is built.
 Run with: uvicorn frontend.server:app --reload --port 8000
 """
 
+import hashlib
 import io
 import logging
+import os
 from importlib import import_module
+from pathlib import Path
 from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -17,6 +20,10 @@ from fastapi.responses import FileResponse, JSONResponse
 import pypdf
 from docx import Document as DocxDocument
 from shared.gemini_client import GeminiClient
+
+# Directory for generated marketing videos (created on first use)
+VIDEOS_DIR = Path(__file__).parent / "static" / "videos"
+VIDEOS_DIR.mkdir(parents=True, exist_ok=True)
 
 _extractor = GeminiClient()
 
@@ -82,6 +89,14 @@ except ImportError:
     generate_content_brief = _not_ready("06_marketing")
 
 try:
+    _generate_video = import_module(
+        "agents.06_marketing.video_generator"
+    ).generate_video
+except (ImportError, Exception) as _e:
+    logger.warning("Agent 06 video generator not available: %s", _e)
+    _generate_video = None
+
+try:
     analyze_customer_data = import_module(
         "agents.07_analytics.agent"
     ).analyze_customer_data
@@ -122,6 +137,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Serve generated marketing videos
+app.mount("/static/videos", StaticFiles(directory=str(VIDEOS_DIR)), name="videos")
 
 
 @app.get("/health")
@@ -298,7 +316,7 @@ async def agent04_cv_fraud(files: list[UploadFile] = File(...)):
 
 @app.post("/api/agent06")
 async def agent06_marketing(request: Request):
-    """Marketing content brief generator for Dr. Theiss."""
+    """Marketing content brief + MP4 video generator for Dr. Theiss."""
     try:
         body = await request.json()
         product_name = body.get("product_name", "").strip()
@@ -320,6 +338,18 @@ async def agent06_marketing(request: Request):
             target_platform=target_platform,
             target_audience=target_audience,
         )
+
+        # Generate an actual MP4 preview video from the brief
+        if _generate_video is not None:
+            key = hashlib.md5(
+                f"{product_name}{campaign_goal}{target_platform}".encode()
+            ).hexdigest()[:12]
+            video_filename = f"brief_{key}.mp4"
+            video_path = str(VIDEOS_DIR / video_filename)
+            if not os.path.exists(video_path):
+                _generate_video(result, video_path)
+            result["video_url"] = f"/static/videos/{video_filename}"
+
         return JSONResponse(result)
 
     except ValueError as exc:

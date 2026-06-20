@@ -2231,6 +2231,52 @@
       line-height: 1.4;
     }
 
+    .video-preview-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-3);
+      margin-top: var(--space-5);
+      padding: var(--space-4);
+      background: var(--bg-elevated);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+    }
+
+    .video-label {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      align-self: flex-start;
+    }
+
+    .video-preview {
+      width: 100%;
+      max-width: 270px;
+      aspect-ratio: 9 / 16;
+      border-radius: var(--radius-md);
+      background: #000;
+      display: block;
+    }
+
+    .video-download-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-4);
+      background: var(--brand);
+      color: #fff;
+      border-radius: var(--radius-md);
+      font-size: var(--text-sm);
+      font-weight: 500;
+      text-decoration: none;
+      transition: opacity 0.15s;
+    }
+
+    .video-download-btn:hover { opacity: 0.85; }
+
     .timeline {
       display: grid;
       grid-auto-columns: minmax(180px, 1fr);
@@ -2657,13 +2703,13 @@
 
   { id: 5, name: "Interview Support", short: "Interview", customer: "Kohlpharma GmbH", location: "Merzig", desc: "Generate role-specific interview questions and highlight potential candidate red flags based on a technical job description", input: "text-single", field: "job_description", placeholder: "Paste the full job description here...", endpoint: "/api/agent05", dept: "hr", icon: "message" },
 
-  { id: 6, name: "Marketing Content", short: "Marketing", customer: "Dr. Theiss", location: "Homburg", desc: "Create studio-quality TikTok and Instagram Reel concepts while automatically respecting platform-specific safe zones and overlay requirements", input: "marketing-form", endpoint: "/api/agent06", dept: "operations", icon: "video" },
+  { id: 6, name: "Marketing Content", short: "Marketing", customer: "Dr. Theiss", location: "Homburg", desc: "Create studio-quality TikTok and Instagram Reel concepts while automatically respecting platform-specific safe zones and overlay requirements", input: "marketing-form", endpoint: "/api/agent06", dept: "operations", icon: "video", status: "in-progress" },
 
-  { id: 7, name: "Customer Analytics", short: "Analytics", customer: "Dr. Theiss", location: "Homburg", desc: "Analyse customer behaviour, generate targeting recommendations, identify optimal campaign timing, and evaluate resulting sales impact", input: "analytics-form", endpoint: "/api/agent07", dept: "operations", icon: "chart" },
+  { id: 7, name: "Customer Analytics", short: "Analytics", customer: "Dr. Theiss", location: "Homburg", desc: "Analyse customer behaviour, generate targeting recommendations, identify optimal campaign timing, and evaluate resulting sales impact", input: "analytics-form", endpoint: "/api/agent07", dept: "operations", icon: "chart", status: "in-progress" },
 
-  { id: 8, name: "Dynamic Pricing", short: "Pricing", customer: "Dr. Theiss", location: "Homburg", desc: "Recommend dynamic product pricing based on external demand signals such as weather, seasonal events, sports fixtures, and supply-chain conditions", input: "pricing-form", endpoint: "/api/agent08", dept: "finance", icon: "euro" },
+  { id: 8, name: "Dynamic Pricing", short: "Pricing", customer: "Dr. Theiss", location: "Homburg", desc: "Recommend dynamic product pricing based on external demand signals such as weather, seasonal events, sports fixtures, and supply-chain conditions", input: "pricing-form", endpoint: "/api/agent08", dept: "finance", icon: "euro", status: "in-progress" },
 
-  { id: 9, name: "Competitive Gap Analysis", short: "Gap Analysis", customer: "Dr. Theiss", location: "Homburg", desc: "Benchmark products against competitors and identify unmet market opportunities, feature gaps, and potential areas for expansion", input: "gap-form", endpoint: "/api/agent09", dept: "operations", icon: "target" },
+  { id: 9, name: "Competitive Gap Analysis", short: "Gap Analysis", customer: "Dr. Theiss", location: "Homburg", desc: "Benchmark products against competitors and identify unmet market opportunities, feature gaps, and potential areas for expansion", input: "gap-form", endpoint: "/api/agent09", dept: "operations", icon: "target", status: "in-progress" },
 
   { id: 10, name: "Secure Email Agent", short: "Secure Email", customer: "Rheinmetall", location: "Cross-account capability", desc: "Securely process applicant emails and attachments, detect prompt injection attempts, and verify that all required application documents are present", input: "email-form", endpoint: "/api/agent10", dept: "it", icon: "shield" },
 ];
@@ -2782,12 +2828,22 @@
       return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
     }
 
+    function agentStatusDot(agent) {
+      if (agent.status === "in-progress") return "orange";
+      return "ready";
+    }
+
+    function agentStatusLabel(agent) {
+      if (agent.status === "in-progress") return "In Progress";
+      return "Ready";
+    }
+
     function renderSidebar() {
       sidebarList.innerHTML = AGENTS.map((agent) => `
         <button class="sidebar-item ${state.currentAgent === agent.id ? "active" : ""}" type="button" data-agent-id="${agent.id}">
           <span class="num-badge">${num(agent.id)}</span>
           <span class="sidebar-name">${escapeHtml(agent.short)}</span>
-          <span class="status-dot"></span>
+          <span class="status-dot ${agentStatusDot(agent)}"></span>
         </button>
       `).join("");
     }
@@ -2828,7 +2884,7 @@
           <p class="description">${escapeHtml(agent.desc)}</p> 
           <div class="card-spacer"></div>
           <div class="card-bottom">
-            <div class="agent-pill"><span class="status-dot"></span><span>Ready</span></div>
+            <div class="agent-pill"><span class="status-dot ${agentStatusDot(agent)}"></span><span>${agentStatusLabel(agent)}</span></div>
             <button class="run-btn" type="button">Run <span aria-hidden="true">→</span></button>
           </div>
         </article>
@@ -3860,37 +3916,31 @@
     }
 
     function renderMarketingResult(data) {
-      const specs = data.platform_specs || {};
+      if (data.video_url) {
+        return `
+          <div class="video-preview-wrap">
+            <video
+              class="video-preview"
+              src="${escapeHtml(data.video_url)}"
+              controls
+              autoplay
+              loop
+              playsinline
+              preload="auto"
+            ></video>
+            <a class="video-download-btn" href="${escapeHtml(data.video_url)}" download>
+              ${icon("download")} Download MP4
+            </a>
+          </div>
+        `;
+      }
+      // Fallback: no video generated
       return `
-        <div class="platform-row">
-          ${String(data.platform || "Both").includes("TikTok") || data.platform === "Both" ? `<span class="platform-pill">TikTok</span>` : ""}
-          ${String(data.platform || "Both").includes("Instagram") || data.platform === "Both" ? `<span class="platform-pill" style="background:rgba(163,113,247,0.14);color:var(--purple)">Instagram</span>` : ""}
-        </div>
-        <div class="duration-large">${safe(data.content_duration_seconds, 30)} seconds</div>
         <div class="hook-box">
-          <span class="reason-label">HOOK - First 3 seconds</span>
+          <span class="reason-label">HOOK</span>
           <div class="hook-text">${safe(data.hook_text, "Open with the product moment.")}</div>
-          <div class="badge-row"><span class="tiny-pill medium">${safe(data.hook_type, "statement")}</span></div>
         </div>
-        <div class="timeline">
-          ${(data.scene_breakdown || []).map((scene) => `
-            <article class="scene-card">
-              <h3>Scene ${safe(scene.scene_number, "1")} · ${safe(scene.duration_seconds, "5")}s</h3>
-              <div class="scene-line"><strong>Visual:</strong> ${safe(scene.visual)}</div>
-              <div class="scene-line"><strong>Text:</strong> ${safe(scene.text_overlay)}</div>
-              <div class="scene-line"><strong>Voice:</strong> ${safe(scene.voiceover)}</div>
-            </article>
-          `).join("")}
-        </div>
-        <div class="safe-zone-grid">
-          ${renderPlatformSpecs("TikTok", specs.tiktok, false)}
-          ${renderPlatformSpecs("Instagram", specs.instagram, true)}
-        </div>
-        <div class="hashtags">
-          <span class="section-label">Hashtags</span>
-          <div class="chip-row">${(data.suggested_hashtags || []).map((tag) => `<span class="hashtag-pill">${escapeHtml(tag.startsWith("#") ? tag : `#${tag}`)}</span>`).join("")}</div>
-        </div>
-        ${Array.isArray(data.content_warnings) && data.content_warnings.length ? `<div class="notice-banner">${icon("alert")} <span>${data.content_warnings.map(escapeHtml).join(" · ")}</span></div>` : ""}
+        <div class="notice-banner">${icon("alert")} <span>Video generation unavailable — install moviepy to enable it.</span></div>
       `;
     }
 
