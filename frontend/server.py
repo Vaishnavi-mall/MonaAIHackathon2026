@@ -7,12 +7,18 @@ Agent logic is imported from agents/ as each agent is built.
 Run with: uvicorn frontend.server:app --reload --port 8000
 """
 
+import io
 import logging
 from importlib import import_module
 from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
+import pypdf
+from docx import Document as DocxDocument
+from shared.gemini_client import GeminiClient
+
+_extractor = GeminiClient()
 
 logging.basicConfig(level="INFO")
 logger = logging.getLogger(__name__)
@@ -354,6 +360,55 @@ async def agent07_analytics(request: Request):
         return JSONResponse({"error": str(exc)}, status_code=500)
 
 
+@app.post("/api/extract-text")
+async def extract_text(file: UploadFile = File(...)):
+    """
+    Extract plain text from an uploaded PDF, DOCX, JPG, or PNG.
+    PDF/DOCX are parsed locally; images use Gemini vision.
+    """
+    filename = file.filename or "document"
+    content = await file.read()
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+
+    try:
+        if ext == "pdf":
+            reader = pypdf.PdfReader(io.BytesIO(content))
+            text = "\n".join(
+                page.extract_text() or "" for page in reader.pages
+            ).strip()
+            if not text:
+                raw = _extractor.generate_with_file(
+                    'Extract all text from this document. Return JSON: {"extracted_text": "<text>"}',
+                    content,
+                    "application/pdf",
+                )
+                import json as _json
+                text = _json.loads(raw).get("extracted_text", "")
+        elif ext == "docx":
+            doc = DocxDocument(io.BytesIO(content))
+            text = "\n".join(p.text for p in doc.paragraphs if p.text.strip())
+        elif ext in ("jpg", "jpeg", "png"):
+            mime = "image/jpeg" if ext in ("jpg", "jpeg") else "image/png"
+            raw = _extractor.generate_with_file(
+                'Extract all text visible in this document image. Return JSON: {"extracted_text": "<text>"}',
+                content,
+                mime,
+            )
+            import json as _json
+            text = _json.loads(raw).get("extracted_text", "")
+        else:
+            return JSONResponse(
+                {"error": f"Unsupported file type: .{ext}. Use PDF, DOCX, JPG, or PNG."},
+                status_code=400,
+            )
+
+        return JSONResponse({"filename": filename, "extracted_text": text})
+
+    except Exception as exc:
+        logger.error("Text extraction failed for %s: %s", filename, exc)
+        return JSONResponse({"error": str(exc)}, status_code=500)
+
+
 @app.post("/api/agent10")
 async def agent10_secure_email(request: Request):
     """
@@ -364,14 +419,19 @@ async def agent10_secure_email(request: Request):
     try:
         body = await request.json()
         email_body = body.get("email_body", "").strip()
-        attachments_summary = body.get("attachments_summary", "").strip()
+        attachments = body.get("attachments", [])
 
         if not email_body:
             return JSONResponse(
                 {"error": "email_body is required"}, status_code=400
             )
 
-        result = process_applicant_email(email_body, attachments_summary)
+        if not isinstance(attachments, list):
+            return JSONResponse(
+                {"error": "attachments must be a list"}, status_code=400
+            )
+
+        result = process_applicant_email(email_body, attachments)
         return JSONResponse(result)
 
     except ValueError as exc:
