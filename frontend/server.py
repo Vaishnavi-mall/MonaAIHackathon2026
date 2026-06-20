@@ -36,11 +36,12 @@ except ImportError:
 
 try:
     shift_agent = import_module("agents.02_shift.agent")
-    find_shift_replacements = shift_agent.find_shift_replacements
-    parse_schedule_file = shift_agent.parse_schedule_file
+    process_shift_request = shift_agent.process_shift_request
+    extract_employee_info = shift_agent.extract_employee_info
 except ImportError:
     logger.warning("Agent 02 (shift) not available")
-    find_shift_replacements = parse_schedule_file = _not_ready("02_shift")
+    process_shift_request = _not_ready("02_shift")
+    extract_employee_info = lambda *_: None
 
 try:
     permit_agent = import_module("agents.03_work_permit.agent")
@@ -176,10 +177,8 @@ async def agent02_shift(
         if not file_bytes:
             return JSONResponse({"error": "Schedule file is empty"}, status_code=400)
 
-        schedule_text = parse_schedule_file(file_bytes)
-
-        result = find_shift_replacements(
-            schedule_data=schedule_text,
+        result = process_shift_request(
+            file_bytes=file_bytes,
             absent_staff=absent_staff,
             shift_details=shift_details,
         )

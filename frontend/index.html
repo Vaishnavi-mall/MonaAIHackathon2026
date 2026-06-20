@@ -2537,37 +2537,35 @@
     <aside class="sidebar" id="sidebar" aria-label="Agents">
       <div class="sidebar-section-label">AGENTS</div>
       <nav class="sidebar-list" id="sidebarList"></nav>
-      <div class="sidebar-footer">
-        <div class="sidebar-badge"><span class="status-dot"></span><span id="shieldIcon"></span><span>GDPR Compliant</span></div>
-        <div class="sidebar-badge"><span class="status-dot"></span><span id="checkIcon"></span><span>EU AI Act Ready</span></div>
-      </div>
+      <div class="sidebar-footer"></div>
     </aside>
 
     <main class="main" id="app"></main>
   </div>
 
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <script>
     const API_BASE = "http://localhost:8000";
     const AGENTS = [
   { id: 1, name: "Invoice processing automation", short: "Invoice", customer: "Globus Group", location: "St. Wendel", desc: "Extract supplier invoices from emails, categorise them automatically, and route them to the correct department for validation and approval", input: "file-multi", accepts: ".pdf,.jpg,.jpeg,.png,.docx", dept: "operations", endpoint: "/api/agent01", icon: "receipt" },
 
-  { id: 2, name: "Shift Replacement", short: "Shift", customer: "Universitätsklinikum des Saarlandes / UKS", location: "Homburg", desc: "Identify available qualified staff for urgent shift vacancies and automatically notify potential replacements when schedules change.", input: "shift-form", endpoint: "/api/agent02", dept: "hr", icon: "calendar" },
+  { id: 2, name: "Shift Replacement", short: "Shift", customer: "Universitätsklinikum des Saarlandes / UKS", location: "Homburg", desc: "Identify available qualified staff for urgent shift vacancies and automatically notify potential replacements when schedules change", input: "shift-form", endpoint: "/api/agent02", dept: "hr", icon: "calendar" },
 
-  { id: 3, name: "Work Permit Validation", short: "Permit", customer: "Leistenschneider", location: "Saarbrücken", desc: "Verify whether uploaded documents are valid work permits, determine expiry dates, and provide a confidence score for the validation result.", input: "file-multi", accepts: ".pdf,.jpg,.jpeg,.png", endpoint: "/api/agent03", dept: "hr", icon: "badge" },
+  { id: 3, name: "Work Permit Validation", short: "Permit", customer: "Leistenschneider", location: "Saarbrücken", desc: "Verify whether uploaded documents are valid work permits, determine expiry dates, and provide a confidence score for the validation result", input: "file-multi", accepts: ".pdf,.jpg,.jpeg,.png", endpoint: "/api/agent03", dept: "hr", icon: "badge" },
 
-  { id: 4, name: "CV Fraud Detection", short: "CV Fraud", customer: "Persowerk", location: "Saarbrücken", desc: "Analyse CVs and certificates for potential fraud, identify inconsistencies in work history, and validate qualifications and certifications.", input: "file-multi", accepts: ".pdf,.jpg,.jpeg,.png", endpoint: "/api/agent04", dept: "hr", icon: "scan" },
+  { id: 4, name: "CV Fraud Detection", short: "CV Fraud", customer: "Persowerk", location: "Saarbrücken", desc: "Analyse CVs and certificates for potential fraud, identify inconsistencies in work history, and validate qualifications and certifications", input: "file-multi", accepts: ".pdf,.jpg,.jpeg,.png", endpoint: "/api/agent04", dept: "hr", icon: "scan" },
 
-  { id: 5, name: "Interview Support", short: "Interview", customer: "Kohlpharma", location: "Merzig", desc: "Generate role-specific interview questions and highlight potential candidate red flags based on a technical job description.", input: "text-single", field: "job_description", placeholder: "Paste the full job description here...", endpoint: "/api/agent05", dept: "hr", icon: "message" },
+  { id: 5, name: "Interview Support", short: "Interview", customer: "Kohlpharma", location: "Merzig", desc: "Generate role-specific interview questions and highlight potential candidate red flags based on a technical job description", input: "text-single", field: "job_description", placeholder: "Paste the full job description here...", endpoint: "/api/agent05", dept: "hr", icon: "message" },
 
-  { id: 6, name: "Marketing Content", short: "Marketing", customer: "Dr. Theiss", location: "Homburg", desc: "Create studio-quality TikTok and Instagram Reel concepts while automatically respecting platform-specific safe zones and overlay requirements.", input: "marketing-form", endpoint: "/api/agent06", dept: "operations", icon: "video" },
+  { id: 6, name: "Marketing Content", short: "Marketing", customer: "Dr. Theiss", location: "Homburg", desc: "Create studio-quality TikTok and Instagram Reel concepts while automatically respecting platform-specific safe zones and overlay requirements", input: "marketing-form", endpoint: "/api/agent06", dept: "operations", icon: "video" },
 
-  { id: 7, name: "Customer Analytics", short: "Analytics", customer: "Dr. Theiss", location: "Homburg", desc: "Analyse customer behaviour, generate targeting recommendations, identify optimal campaign timing, and evaluate resulting sales impact.", input: "analytics-form", endpoint: "/api/agent07", dept: "operations", icon: "chart" },
+  { id: 7, name: "Customer Analytics", short: "Analytics", customer: "Dr. Theiss", location: "Homburg", desc: "Analyse customer behaviour, generate targeting recommendations, identify optimal campaign timing, and evaluate resulting sales impact", input: "analytics-form", endpoint: "/api/agent07", dept: "operations", icon: "chart" },
 
-  { id: 8, name: "Dynamic Pricing", short: "Pricing", customer: "Dr. Theiss", location: "Homburg", desc: "Recommend dynamic product pricing based on external demand signals such as weather, seasonal events, sports fixtures, and supply-chain conditions.", input: "pricing-form", endpoint: "/api/agent08", dept: "finance", icon: "euro" },
+  { id: 8, name: "Dynamic Pricing", short: "Pricing", customer: "Dr. Theiss", location: "Homburg", desc: "Recommend dynamic product pricing based on external demand signals such as weather, seasonal events, sports fixtures, and supply-chain conditions", input: "pricing-form", endpoint: "/api/agent08", dept: "finance", icon: "euro" },
 
-  { id: 9, name: "Competitive Gap Analysis", short: "Gap Analysis", customer: "Dr. Theiss", location: "Homburg", desc: "Benchmark products against competitors and identify unmet market opportunities, feature gaps, and potential areas for expansion.", input: "gap-form", endpoint: "/api/agent09", dept: "operations", icon: "target" },
+  { id: 9, name: "Competitive Gap Analysis", short: "Gap Analysis", customer: "Dr. Theiss", location: "Homburg", desc: "Benchmark products against competitors and identify unmet market opportunities, feature gaps, and potential areas for expansion", input: "gap-form", endpoint: "/api/agent09", dept: "operations", icon: "target" },
 
-  { id: 10, name: "Secure Email Agent", short: "Secure Email", customer: "Rheinmetall", location: "Cross-account capability", desc: "Securely process applicant emails and attachments, detect prompt injection attempts, and verify that all required application documents are present.", input: "email-form", endpoint: "/api/agent10", dept: "it", icon: "shield" },
+  { id: 10, name: "Secure Email Agent", short: "Secure Email", customer: "Rheinmetall", location: "Cross-account capability", desc: "Securely process applicant emails and attachments, detect prompt injection attempts, and verify that all required application documents are present", input: "email-form", endpoint: "/api/agent10", dept: "it", icon: "shield" },
 ];
 
     const state = {
@@ -3125,6 +3123,76 @@
         } else if (id === 2) {
           const file = formData.get("schedule_file");
           if (!file || !file.size) throw new Error("Please upload a schedule file.");
+          if (typeof XLSX !== "undefined") {
+            const arrayBuffer = await file.arrayBuffer();
+            const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: "array" });
+
+            // --- Date validation against Weekly_Schedule columns ---
+            const shiftDetails = formData.get("shift_details") || "";
+            const dateMatch = shiftDetails.match(/\b(\d{4}-\d{2}-\d{2}|\d{2}-\d{2}-\d{4}|\d{2}\/\d{2}\/\d{4}|\d{2}\.\d{2}\.\d{4})\b/);
+            if (dateMatch) {
+              const raw = dateMatch[1];
+              let parsed;
+              if (/^\d{2}[-\/\.]\d{2}[-\/\.]\d{4}$/.test(raw)) {
+                const sep = raw[2];
+                const [d, m, y] = raw.split(sep);
+                parsed = new Date(`${y}-${m}-${d}`);
+              } else {
+                parsed = new Date(raw);
+              }
+              if (!isNaN(parsed.getTime())) {
+                const schedSheet = workbook.Sheets["Weekly_Schedule"];
+                const scheduleDates = [];
+                if (schedSheet) {
+                  const rows = XLSX.utils.sheet_to_json(schedSheet, { header: 1 });
+                  const headers = rows[0] || [];
+                  const today = new Date();
+                  headers.forEach((h) => {
+                    if (!h || typeof h !== "string") return;
+                    const m = h.match(/\b(\d{1,2})\/(\d{2})\b/);
+                    if (!m) return;
+                    const month = parseInt(m[1], 10) - 1;
+                    const day = parseInt(m[2], 10);
+                    let year = today.getFullYear();
+                    let candidate = new Date(year, month, day);
+                    if (candidate - today < -180 * 86400000) candidate = new Date(year + 1, month, day);
+                    scheduleDates.push(candidate);
+                  });
+                }
+                if (scheduleDates.length > 0) {
+                  const inSchedule = scheduleDates.some(
+                    (s) => s.getFullYear() === parsed.getFullYear() && s.getMonth() === parsed.getMonth() && s.getDate() === parsed.getDate()
+                  );
+                  if (!inSchedule) {
+                    const fmt = (d) => d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+                    throw new Error(`Date not in the uploaded schedule. Valid dates are: ${scheduleDates.map(fmt).join(", ")}.`);
+                  }
+                }
+              }
+            }
+
+            // --- Name validation against Roster ---
+            const absentStaff = (formData.get("absent_staff") || "").split(",")[0].trim();
+            if (absentStaff) {
+              const rosterSheet = workbook.Sheets["Roster"];
+              if (rosterSheet) {
+                const rows = XLSX.utils.sheet_to_json(rosterSheet, { header: 1 });
+                const headers = (rows[0] || []).map((h) => String(h || "").toLowerCase());
+                const firstIdx = headers.findIndex((h) => h.includes("first"));
+                const lastIdx = headers.findIndex((h) => h.includes("last"));
+                const rosterNames = rows.slice(1).map((row) => {
+                  const first = firstIdx >= 0 ? String(row[firstIdx] || "") : "";
+                  const last = lastIdx >= 0 ? String(row[lastIdx] || "") : "";
+                  return `${first} ${last}`.trim().toLowerCase();
+                }).filter(Boolean);
+                const needle = absentStaff.toLowerCase();
+                const found = rosterNames.some((n) => n === needle || n.includes(needle) || needle.includes(n));
+                if (!found && rosterNames.length > 0) {
+                  throw new Error(`"${absentStaff}" was not found in the uploaded schedule. Please check the name matches the roster exactly.`);
+                }
+              }
+            }
+          }
           response = await fetch(API_BASE + agent.endpoint, { method: "POST", body: formData });
         } else {
           const payload = jsonPayloadForAgent(id, formData);
@@ -3788,8 +3856,6 @@
 
     function init() {
       mobileMenuBtn.innerHTML = icon("menu");
-      document.getElementById("shieldIcon").innerHTML = icon("shield");
-      document.getElementById("checkIcon").innerHTML = icon("check");
       mobileMenuBtn.addEventListener("click", () => document.body.classList.toggle("sidebar-open"));
       sidebarList.addEventListener("click", (event) => {
         const button = event.target.closest("[data-agent-id]");
