@@ -2553,7 +2553,7 @@
 
   { id: 3, name: "Work Permit Validation", short: "Work Permit", customer: "Leistenschneider Personaldienstleistungen GmbH", location: "Saarbrücken", desc: "Verify whether uploaded documents are valid work permits, determine expiry dates, and provide a confidence score for the validation result", input: "file-multi", accepts: ".pdf,.jpg,.jpeg,.png", endpoint: "/api/agent03", dept: "hr", icon: "badge" },
 
-  { id: 4, name: "CV Fraud Detection", short: "CV Fraud", customer: "Persowerk", location: "Saarbrücken", desc: "Analyse CVs and certificates for potential fraud, identify inconsistencies in work history, and validate qualifications and certifications", input: "file-multi", accepts: ".pdf,.jpg,.jpeg,.png", endpoint: "/api/agent04", dept: "hr", icon: "scan" },
+  { id: 4, name: "CV Fraud Detection", short: "CV Fraud", customer: "Persowerk Deutschland GmbH", location: "Saarbrücken", desc: "Analyse CVs and certificates for potential fraud, identify inconsistencies in work history, and validate qualifications and certifications", input: "file-multi", accepts: ".pdf,.jpg,.jpeg,.png", endpoint: "/api/agent04", dept: "hr", icon: "scan" },
 
   { id: 5, name: "Interview Support", short: "Interview", customer: "Kohlpharma", location: "Merzig", desc: "Generate role-specific interview questions and highlight potential candidate red flags based on a technical job description", input: "text-single", field: "job_description", placeholder: "Paste the full job description here...", endpoint: "/api/agent05", dept: "hr", icon: "message" },
 
@@ -3569,17 +3569,28 @@
       const recommendation = data.recommendation || "verify_further";
       const recClass = recommendation === "proceed" ? "proceed" : recommendation === "reject" ? "reject" : "verify";
       const recText = recommendation === "proceed" ? "Proceed to interview" : recommendation === "reject" ? "Do not proceed" : "Verify before proceeding";
+      const docType = (data.document_type || "cv").toLowerCase();
+      const isCert = docType === "certificate";
+      const docLabel = isCert ? "Certificate" : docType === "other" ? "Document" : "CV";
+      const col1Label = isCert ? "Tampering indicators" : "AI indicators";
+      const col2Label = "Inconsistencies";
+      const col3Label = isCert ? "Verifiability flags" : "Experience flags";
+      const col3Data = data.document_flags || data.experience_verification_flags;
+      const nameLabel = isCert ? safe(data.candidate_name, "Holder") : safe(data.candidate_name, "Candidate");
+      const issuerRow = isCert && data.issuer ? `<div style="color:var(--text-secondary);font-size:12px;text-align:center;margin-top:2px">Issued by ${escapeHtml(data.issuer)}</div>` : "";
       return `
         <div class="risk-gauge-wrap">
           ${riskGauge(score, color)}
           <div class="risk-center">${Math.round(score * 100)}%</div>
           <div class="risk-pill ${level}">${escapeHtml(level)} risk</div>
         </div>
-        <div class="candidate-name">${safe(data.candidate_name, "Candidate")}</div>
+        <div class="candidate-name">${nameLabel}</div>
+        ${issuerRow}
+        <div style="text-align:center;margin:4px 0 12px"><span class="tiny-pill" style="background:var(--bg-elevated);color:var(--text-secondary)">${escapeHtml(docLabel)}</span></div>
         <div class="three-cols">
-          <div><span class="section-label">AI indicators</span>${renderBulletList(data.ai_generated_indicators)}</div>
-          <div><span class="section-label">Inconsistencies</span>${renderBulletList(data.inconsistencies_found)}</div>
-          <div><span class="section-label">Experience flags</span>${renderBulletList(data.experience_verification_flags)}</div>
+          <div><span class="section-label">${col1Label}</span>${renderBulletList(data.ai_generated_indicators)}</div>
+          <div><span class="section-label">${col2Label}</span>${renderBulletList(data.inconsistencies_found)}</div>
+          <div><span class="section-label">${col3Label}</span>${renderBulletList(col3Data)}</div>
         </div>
         <div class="assessment-box">${safe(data.overall_assessment, "No assessment returned.")}</div>
         <div class="recommendation-banner ${recClass}">${recClass === "proceed" ? "✓" : recClass === "reject" ? "×" : "!"} ${recText}</div>

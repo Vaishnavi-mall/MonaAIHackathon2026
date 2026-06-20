@@ -7,6 +7,7 @@ Accepts PDF or image CVs.
 """
 
 import logging
+from datetime import date
 from shared.gemini_client import GeminiClient
 from shared.utils import clean_json_response
 from .prompts import SYSTEM_PROMPT, CV_ANALYSIS_PROMPT
@@ -22,6 +23,7 @@ SUPPORTED_MIME_TYPES = {
 }
 
 VALID_RECOMMENDATIONS = {"proceed", "verify_further", "reject"}
+VALID_DOCUMENT_TYPES = {"cv", "certificate", "other"}
 
 
 def analyze_cv(file_bytes: bytes, mime_type: str) -> dict:
@@ -50,8 +52,22 @@ def analyze_cv(file_bytes: bytes, mime_type: str) -> dict:
 
     logger.info("Analysing CV — mime=%s size=%d bytes", mime_type, len(file_bytes))
 
+    today = date.today()
+    date_context = (
+        f"Today's date: {today.strftime('%d %B %Y')} (current year: {today.year})\n\n"
+        f"IMPORTANT — date interpretation rules:\n"
+        f"- Year-only dates like \"{today.year}\" cover the full calendar year. "
+        f"Entries dated \"{today.year}\" or \"YYYY–{today.year}\" are NOT future-dated — "
+        f"they are ongoing or recently completed. Do NOT flag them as suspicious.\n"
+        f"- Only flag a date as future if it is explicitly beyond {today.year}, "
+        f"or if a specific month/day is given that is clearly after today.\n"
+        f"- \"Present\", \"current\", \"ongoing\", or a year equal to {today.year} "
+        f"all mean the person is still in that role or programme right now.\n\n"
+    )
+    prompt = date_context + CV_ANALYSIS_PROMPT
+
     raw = _client.generate_with_file(
-        prompt=CV_ANALYSIS_PROMPT,
+        prompt=prompt,
         file_bytes=file_bytes,
         mime_type=mime_type,
         system_prompt=SYSTEM_PROMPT,
@@ -62,12 +78,20 @@ def analyze_cv(file_bytes: bytes, mime_type: str) -> dict:
     # GDPR Art. 22 hard override — human must review, no exceptions
     result["human_review_required"] = True
 
-    # Sanitize recommendation — reject unexpected values
+    # Sanitize enums
     if result.get("recommendation") not in VALID_RECOMMENDATIONS:
         result["recommendation"] = "verify_further"
+    if result.get("document_type") not in VALID_DOCUMENT_TYPES:
+        result["document_type"] = "cv"
+
+    # Normalise renamed field: support both old and new key names
+    if "experience_verification_flags" in result and "document_flags" not in result:
+        result["document_flags"] = result.pop("experience_verification_flags")
+    result.setdefault("document_flags", [])
 
     logger.info(
-        "CV analysed — candidate=%s risk=%s score=%.2f",
+        "Document analysed — type=%s candidate=%s risk=%s score=%.2f",
+        result.get("document_type"),
         result.get("candidate_name"),
         result.get("fraud_risk_level"),
         result.get("fraud_risk_score", 0),
